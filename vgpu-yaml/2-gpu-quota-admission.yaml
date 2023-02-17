@@ -1,0 +1,87 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: kube-system
+  name: gpu-quota-admission
+spec:
+  selector:
+    k8s-app: gpu-quota-admission
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 3456
+      targetPort: 3456
+---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: gpu-quota-admission
+    namespace: kube-system
+    labels:
+      k8s-app: gpu-quota-admission
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        k8s-app: gpu-quota-admission
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        namespace: kube-system
+        labels:
+          k8s-app: gpu-quota-admission
+      spec:
+        tolerations:
+          - key: node-role.kubernetes.io/master
+            effect: NoSchedule
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 1
+                preference:
+                  matchExpressions:
+                    - key: node-role.kubernetes.io/master
+                      operator: Exists
+        serviceAccount: gpu-manager
+        initContainers:
+          - image: khw934/busybox:1.31.1
+            imagePullPolicy: IfNotPresent
+            name: init-kube-config
+            command: ['sh', '-c',' mkdir -p /etc/kubernetes/ && cp /root/gpu-quota-admission/gpu-quota-admission.config /etc/kubernetes/']
+            volumeMounts:
+              - mountPath: /root/gpu-quota-admission/
+                name: config
+            securityContext:
+              privileged: true
+        containers:
+          - name: gpu-quota-admission
+            image: khw934/gpu-admission:V1.3.7
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: "1"
+                memory: 1Gi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+            env:
+              - name: LOG_LEVEL
+                value: "20"
+              - name: EXTRA_FLAGS
+                value: " --logtostderr"
+            ports:
+              - containerPort: 3456
+            volumeMounts:
+              - mountPath: /root/gpu-quota-admission/
+                name: config
+        dnsPolicy: ClusterFirstWithHostNet
+        priority: 2000000000
+        priorityClassName: system-cluster-critical
+        volumes:
+          - configMap:
+              defaultMode: 420
+              name: gpu-quota-admission
+            name: config
+

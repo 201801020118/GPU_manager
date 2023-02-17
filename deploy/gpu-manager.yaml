@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gpu-manager-daemonset
+  namespace: kube-system
+spec:
+  minReadySeconds: 10
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: gpu-manager-daemonset
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        name: gpu-manager-daemonset
+    spec:
+      containers:
+      - env:
+        - name: LOG_LEVEL
+          value: "4"
+        - name: EXTRA_FLAGS
+          value: --logtostderr
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        image: registry.cn-beijing.aliyuncs.com/idealnj/gpu-manager:develop
+        imagePullPolicy: IfNotPresent
+        name: gpu-manager
+        ports:
+        - containerPort: 5678
+          hostPort: 5678
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/kubelet/device-plugins
+          name: device-plugin
+        - mountPath: /etc/gpu-manager/vdriver
+          name: vdriver
+        - mountPath: /etc/gpu-manager/vm
+          name: vmdata
+        - mountPath: /var/log/gpu-manager
+          name: log
+        - mountPath: /etc/gpu-manager/checkpoint
+          name: checkpoint
+        - mountPath: /var/run
+          name: rundir
+        - mountPath: /sys/fs/cgroup
+          name: cgroup
+          readOnly: true
+        - mountPath: /usr/local/host
+          name: usr-directory
+          readOnly: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      hostPID: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - ' /sbin/modprobe nvidia-uvm 2>/dev/null && mknod -m 666 /dev/nvidia-uvm
+          c `grep nvidia-uvm /proc/devices | awk ''{print $1}''` 0 2>/dev/null ||
+          echo 0'
+        image: registry.cn-beijing.aliyuncs.com/idealnj/busybox:1.31.1
+        imagePullPolicy: IfNotPresent
+        name: nvidia-uvm-enable
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+        - mountPath: /dev
+          name: dev
+      nodeSelector:
+        nvidia-device-enable: enable
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: gpu-manager
+      serviceAccountName: gpu-manager
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoSchedule
+        key: ideal.com/vcuda-core
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /lib/modules
+          type: Directory
+        name: lib-modules
+      - hostPath:
+          path: /dev
+          type: Directory
+        name: dev
+      - hostPath:
+          path: /var/lib/kubelet/device-plugins
+          type: Directory
+        name: device-plugin
+      - hostPath:
+          path: /etc/gpu-manager/vm
+          type: DirectoryOrCreate
+        name: vmdata
+      - hostPath:
+          path: /etc/gpu-manager/vdriver
+          type: DirectoryOrCreate
+        name: vdriver
+      - hostPath:
+          path: /etc/gpu-manager/log
+          type: DirectoryOrCreate
+        name: log
+      - hostPath:
+          path: /etc/gpu-manager/checkpoint
+          type: DirectoryOrCreate
+        name: checkpoint
+      - hostPath:
+          path: /var/run
+          type: Directory
+        name: rundir
+      - hostPath:
+          path: /sys/fs/cgroup
+          type: Directory
+        name: cgroup
+      - hostPath:
+          path: /usr
+          type: Directory
+        name: usr-directory
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate

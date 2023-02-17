@@ -1,0 +1,28 @@
+syntax = 'proto3';
+
+package virtualmanager;
+
+service VirtualManager {
+  rpc Vgpuinfo(VgpuInfoRequest) returns (VgpuInfoResponse);
+}
+
+// GPUSpecInfoResponse 当前节点上所有 GPU 卡的 spec 信息
+message VgpuInfoRequest {
+  string cardId = 1;
+}
+
+
+// GPUSpecInfoResponse 当前节点上所有 GPU 卡的 spec 信息
+message VgpuInfoResponse {
+  string modelName = 1;
+  int32  taskNums = 2;
+  repeated podItem  podItems = 3;
+}
+
+message  podItem {
+  string name = 1;
+  string namespace = 2;
+  repeated  string containers=3;
+}
+
+

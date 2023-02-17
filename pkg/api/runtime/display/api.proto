@@ -1,0 +1,121 @@
+syntax = 'proto3';
+
+package display;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+// GPUDisplay service defines the aux APIs for remote request
+service GPUDisplay {
+  // PrintGraph returns the text graph of allocator state
+  rpc PrintGraph(google.protobuf.Empty) returns (GraphResponse) {
+    option (google.api.http) = {
+      get: "/graph"
+    };
+  }
+
+  rpc PrintGpuinfo(google.protobuf.Empty) returns (GraphResponse) {
+    option (google.api.http) = {
+      get: "/gpuinfo"
+    };
+  }
+
+  // GPU usages
+  rpc PrintUsages(google.protobuf.Empty) returns (UsageResponse) {
+    option (google.api.http) = {
+      get: "/usage"
+    };
+  }
+
+  //gpu算力详细信息
+  rpc PrintGpuDetails(ContUsageRequest)returns (ContUsageResponse){
+    option (google.api.http) = {
+          get: "/details"
+        };
+  }
+
+
+  // Version
+  rpc Version(google.protobuf.Empty) returns (VersionResponse) {
+    option (google.api.http) = {
+      get: "/version"
+    };
+  }
+}
+
+message GraphResponse {
+  string graph = 1;
+}
+
+message UsageResponse {
+  map<string, ContainerStat> usage = 1;
+}
+
+
+message ContUsageRequest{
+    // GPUId
+    string  gpuId = 1 ;
+}
+
+message ContainerStat {
+  map<string, Devices> stat = 1;
+  string project = 2;
+  string user = 3;
+  string cluster = 4;
+  map<string, Spec> spec = 5;
+}
+
+
+message ContUsageResponse {
+   repeated ContGpuinfo info=1;
+}
+
+message ContGpuinfo {
+  //任务名称
+  string projectName=1;
+  //pod实例名称
+  string podName =2;
+  //容器索引号
+   string contIdx = 3;
+  //容器id
+  string contid = 4;
+  //容器名称
+  string contName =5;
+  //策略名称
+  string policy =6;
+  //gpu卡id
+  string GpuId = 7;
+  //使用的gpu cores
+  int64 gpu = 8;
+  //使用的gpu memory
+  int64 mem = 9;
+  //gpu 设备总mem
+  int64 FreeMem = 10;
+  //优先级
+  string priority=11;
+  //命名空间
+  string Namespace=12;
+}
+
+
+message Devices {
+    repeated DeviceInfo dev = 1;
+}
+
+message DeviceInfo {
+  string id = 1;
+  string card_idx = 2;
+  float gpu = 10;
+  float mem = 11;
+  repeated int32 pids = 12;
+  float device_mem = 13;
+}
+
+message VersionResponse {
+  string version = 1;
+}
+
+message Spec {
+    int64 gpu = 1;
+    int64 mem = 2;
+}
