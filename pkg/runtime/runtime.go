@@ -31,7 +31,7 @@ type ContainerRuntimeInterface interface {
 	RuntimeName() string
 }
 
-type containerRuntimeManager struct {
+type containerRuntimeManager struct { //实现ContainerRuntimeInterface接口
 	cgroupDriver   string
 	runtimeName    string
 	requestTimeout time.Duration
@@ -51,7 +51,7 @@ func NewContainerRuntimeManager(cgroupDriver, endpoint string, requestTimeout ti
 		return nil, err
 	}
 
-	client := criapi.NewRuntimeServiceClient(conn)
+	client := criapi.NewRuntimeServiceClient(conn) //在k8s创建一个容器运行时客户端
 
 	m := &containerRuntimeManager{
 		cgroupDriver:   cgroupDriver,

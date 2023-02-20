@@ -47,13 +47,13 @@ import (
 type managerImpl struct {
 	config *config.Config
 
-	allocator      allocFactory.GPUTopoService
-	displayer      *display.Display
-	virtualManager *vitrual_manager.VirtualManager
+	allocator      allocFactory.GPUTopoService     //gpu容器调度分配
+	displayer      *display.Display                //gpu使用情况可视化服务
+	virtualManager *vitrual_manager.VirtualManager //vgpu manager
 
-	bundleServer map[string]ResourceServer
-	srv          *grpc.Server
-	tcpServer    *grpc.Server // 监听指定端口的 grpc 服务器, 用于对外通过端口暴露 grpc 服务
+	bundleServer map[string]ResourceServer //资源服务器(暂时不知道怎么使用的)
+	srv          *grpc.Server              //将gpu display server注册到此grpc server中，也通过srv像k8s注册设备插件
+	tcpServer    *grpc.Server              // 监听指定端口的 grpc 服务器, 用于对外通过端口暴露 grpc 服务
 }
 
 type VgpuNodeInfo struct {
@@ -67,7 +67,8 @@ type VgpuNodeInfo struct {
 	AllocatableMemory int64  `json:"allocatableMemory"`
 }
 
-//NewManager creates and returns a new managerImpl struct
+// NewManager creates and returns a new managerImpl struct
+// NewManager 建造并返回了一个manager的结构体接口
 func NewManager(cfg *config.Config) Manager {
 	manager := &managerImpl{
 		config:       cfg,
@@ -80,6 +81,7 @@ func NewManager(cfg *config.Config) Manager {
 }
 
 // Ready tells the manager whether all bundle servers are truely running
+// Ready 告诉manager所有的包服务器是否真的运行
 func (m *managerImpl) Ready() bool {
 	readyServers := 0
 
@@ -98,30 +100,32 @@ func (m *managerImpl) Ready() bool {
 
 // #lizard forgives
 func (m *managerImpl) Run() error {
-	if err := m.validExtraConfig(m.config.ExtraConfigPath); err != nil {
+	if err := m.validExtraConfig(m.config.ExtraConfigPath); err != nil { //校验配置，额外配置路径
 		klog.Errorf("Can not load extra config, err %s", err)
 
 		return err
 	}
 
-	if m.config.Driver == "" {
+	if m.config.Driver == "" { //判断配置，driver是否为空
 		return fmt.Errorf("you should define a driver")
 	}
 
 	if len(m.config.VolumeConfigPath) > 0 {
+		//如果配置了配置。VolumeConfigPath，就初始化VolumeManager对象，执行VolumeManager.Run函数（解析volume.conf，创建对应的目录/硬链接，拷贝对应的文件）
 		volumeManager, err := volume.NewVolumeManager(m.config.VolumeConfigPath, m.config.EnableShare)
 		if err != nil {
 			klog.Errorf("Can not create volume managerImpl, err %s", err)
 			return err
 		}
 
-		if err := volumeManager.Run(); err != nil {
+		if err := volumeManager.Run(); err != nil { //运行卷管理器
 			klog.Errorf("Can not start volume managerImpl, err %s", err)
 			return err
 		}
 	}
 
-	sent, err := systemd.SdNotify(true, "READY=1\n")
+	sent, err := systemd.SdNotify(true, "READY=1\n") //向守护进程发送消息，systemd发送通知信息给daemonREADY=1
+	//相关知识：https://cloud.tencent.com/developer/article/1516125
 	if err != nil {
 		klog.Errorf("Unable to send systemd daemon successful start message: %v\n", err)
 	}
@@ -130,22 +134,36 @@ func (m *managerImpl) Run() error {
 		klog.Errorf("Unable to set Type=notify in systemd service file?")
 	}
 
-	var (
+	var ( //初始化clientSet， 使用sharedInformer创建pod cache（当前主机的所有pod）,在185行执行
 		client    *kubernetes.Clientset
 		clientCfg *rest.Config
 	)
 
-	clientCfg, err = clientcmd.BuildConfigFromFlags("", m.config.KubeConfig)
+	clientCfg, err = clientcmd.BuildConfigFromFlags("", m.config.KubeConfig) //加载配置文件（加载kube的配置文件）
 	if err != nil {
 		return fmt.Errorf("invalid client config: err(%v)", err)
 	}
 
-	client, err = kubernetes.NewForConfig(clientCfg)
+	client, err = kubernetes.NewForConfig(clientCfg) //生成客户端配置
 	if err != nil {
 		return fmt.Errorf("can not generate client from config: error(%v)", err)
 	}
 
-	containerRuntimeManager, err := containerRuntime.NewContainerRuntimeManager(
+	/*
+		一些知识：
+		什么是容器运行时：掌控容器运行的整个生命周期，主要提供的功能如下：
+		制定容器镜像格式
+		构建容器镜像 docker build
+		管理容器镜像 docker images
+		管理容器实例 docker ps
+		运行容器 docker run
+		实现容器镜像共享 docker pull/push
+		相关链接：
+		https://zhuanlan.zhihu.com/p/102171749
+		https://www.cnblogs.com/lianngkyle/p/15086099.html
+	*/
+
+	containerRuntimeManager, err := containerRuntime.NewContainerRuntimeManager( //初始化ContainerRuntimeManager对象， 和容器运行时交互
 		m.config.CgroupDriver, m.config.ContainerRuntimeEndpoint, m.config.RequestTimeout)
 	if err != nil {
 		klog.Errorf("can't create container runtime manager: %v", err)
@@ -154,25 +172,25 @@ func (m *managerImpl) Run() error {
 	klog.V(2).Infof("Container runtime manager is running")
 
 	klog.V(2).Infof("Load container response data")
-	responseManager := response.NewResponseManager()
-	if err := responseManager.LoadFromFile(m.config.DevicePluginPath); err != nil {
+	responseManager := response.NewResponseManager()                                //创建返回数据的结构体
+	if err := responseManager.LoadFromFile(m.config.DevicePluginPath); err != nil { //获取设备插件（device-plugin）的容器的返回数据
 		klog.Errorf("can't load container response data, %+#v", err)
 		return err
 	}
 
-	// 先初始化 VirtualManager
+	// 先初始化 VirtualManager[1]
 	m.virtualManager = vitrual_manager.NewVirtualManager(m.config, containerRuntimeManager, responseManager)
 
 	// 然后初始化并启动 PodInformer, 同时在 PodInformer 中注册 VirtualManager.UpdateGPU handler
 	watchdog.NewPodCache(client, m.config.Hostname, m.virtualManager.UpdateGPU)
 	klog.V(2).Infof("Watchdog is running")
 
-	labeler := watchdog.NewNodeLabeler(client.CoreV1(), m.config.Hostname, m.config.NodeLabels)
+	labeler := watchdog.NewNodeLabeler(client.CoreV1(), m.config.Hostname, m.config.NodeLabels) //初始化nodeLabeler对象， 快速更新节点标签
 	if err := labeler.Run(); err != nil {
 		return err
 	}
 
-	// 启动 VirtualManager
+	// 执行VirtualManager的Run函数[2]
 	m.virtualManager.Run()
 
 	treeInitFn := deviceFactory.NewFuncForName(m.config.Driver)

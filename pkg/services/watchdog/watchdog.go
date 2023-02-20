@@ -20,7 +20,7 @@ const (
 	podHostField = "spec.nodeName"
 )
 
-//PodCache contains a podInformer of pod
+// PodCache contains a podInformer of pod
 type PodCache struct {
 	podInformer informerCore.PodInformer
 }
@@ -29,7 +29,8 @@ var (
 	podCache *PodCache
 )
 
-//NewPodCache creates a new podCache
+// NewPodCache creates a new podCache
+// 新建一个pod缓存
 func NewPodCache(client kubernetes.Interface, hostName string, updateGPU func(oldObj, obj interface{})) {
 	podCache = new(PodCache)
 
@@ -53,7 +54,7 @@ func NewPodCache(client kubernetes.Interface, hostName string, updateGPU func(ol
 	klog.V(2).Infof("Pod cache is running")
 }
 
-//NewPodCacheForTest creates a new podCache for testing
+// NewPodCacheForTest creates a new podCache for testing
 func NewPodCacheForTest(client kubernetes.Interface) {
 	podCache = new(PodCache)
 
@@ -69,16 +70,16 @@ func NewPodCacheForTest(client kubernetes.Interface) {
 	klog.V(2).Infof("Pod cache is running")
 }
 
-//OnAdd is a callback function for podInformer, do nothing for now.
+// OnAdd is a callback function for podInformer, do nothing for now.
 func (p *PodCache) OnAdd(obj interface{}) {}
 
-//OnUpdate is a callback function for podInformer, do nothing for now.
+// OnUpdate is a callback function for podInformer, do nothing for now.
 func (p *PodCache) OnUpdate(oldObj, newObj interface{}) {}
 
-//OnDelete is a callback function for podInformer, do nothing for now.
+// OnDelete is a callback function for podInformer, do nothing for now.
 func (p *PodCache) OnDelete(obj interface{}) {}
 
-//GetActivePods get all active pods from podCache and returns them.
+// GetActivePods get all active pods from podCache and returns them.
 func GetActivePods() map[string]*v1.Pod {
 	if podCache == nil {
 		return nil

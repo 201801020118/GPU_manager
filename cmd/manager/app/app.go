@@ -19,8 +19,8 @@ import (
 )
 
 // #lizard forgives
-func Run(opt *options.Options) error {
-	cfg := &config.Config{
+func Run(opt *options.Options) error { //run的主代码，在app.go中
+	cfg := &config.Config{ //流程1：解析Options对象（配置参数），用来填充Config对象
 		Driver:                   opt.Driver,
 		QueryPort:                opt.QueryPort,
 		QueryAddr:                opt.QueryAddr,
@@ -39,19 +39,19 @@ func Run(opt *options.Options) error {
 		Port:                     opt.Port,
 	}
 
-	if len(opt.HostnameOverride) > 0 {
+	if len(opt.HostnameOverride) > 0 { //获取主机名
 		cfg.Hostname = opt.HostnameOverride
 	}
 
-	if len(opt.ExtraPath) > 0 {
+	if len(opt.ExtraPath) > 0 { //额外配置文件路径
 		cfg.ExtraConfigPath = opt.ExtraPath
 	}
 
-	if len(opt.DevicePluginPath) > 0 {
+	if len(opt.DevicePluginPath) > 0 { //配置device-plugin路径
 		cfg.DevicePluginPath = opt.DevicePluginPath
 	}
 
-	cfg.NodeLabels = make(map[string]string)
+	cfg.NodeLabels = make(map[string]string) //获取节点标签
 	for _, item := range strings.Split(opt.NodeLabels, ",") {
 		if len(item) > 0 {
 			kvs := strings.SplitN(item, "=", 2)
@@ -63,8 +63,8 @@ func Run(opt *options.Options) error {
 		}
 	}
 
-	srv := server.NewManager(cfg)
-	go srv.Run()
+	srv := server.NewManager(cfg) //流程2：初始化managerImpl对象（实现Manager接口），执行接口中定义的Run函数
+	go srv.Run()                  //流程3：执行入口
 
 	waitTimer := time.NewTimer(opt.WaitTimeout)
 	for !srv.Ready() {
@@ -83,7 +83,7 @@ func Run(opt *options.Options) error {
 		return err
 	}
 
-	devicePluginSocket := filepath.Join(cfg.DevicePluginPath, types.KubeletSocket)
+	devicePluginSocket := filepath.Join(cfg.DevicePluginPath, types.KubeletSocket) //设置sock文件的位置，通过config中的配置项设置
 	watcher, err := utils.NewFSWatcher(cfg.DevicePluginPath)
 	if err != nil {
 		log.Println("Failed to created FS watcher.")

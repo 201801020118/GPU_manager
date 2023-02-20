@@ -16,7 +16,8 @@ import (
 	"k8s.io/klog"
 )
 
-//VolumeManager manages volumes used by containers running GPU application
+// VolumeManager manages volumes used by containers running GPU application
+// 卷管理器管理被运用到GPU应用上的数据卷
 type VolumeManager struct {
 	Config  []Config `json:"volume,omitempty"`
 	cfgPath string
@@ -29,7 +30,7 @@ type VolumeManager struct {
 
 type components map[string][]string
 
-//Config contains volume details in config file
+// Config contains volume details in config file
 type Config struct {
 	Name       string     `json:"name,omitempty"`
 	Mode       string     `json:"mode,omitempty"`
@@ -48,26 +49,35 @@ type volumeDir struct {
 	files []string
 }
 
-//Volume contains directory and file info of volume
+// Volume contains directory and file info of volume
 type Volume struct {
 	Path string
 	dirs []volumeDir
 }
 
-//VolumeMap stores Volume for each type
+// VolumeMap stores Volume for each type
 type VolumeMap map[string]*Volume
 
-//NewVolumeManager returns a new VolumeManager
+// NewVolumeManager returns a new VolumeManager
+// 创建一个新的卷管理器
+/*
+	一些解释：
+	当Pod指定到某个节点上时，首先创建的是一个emptyDir卷，
+	并且只要Pod在该节点上运行，卷就一直存在。就像它的名称表示的那样，卷最初是空的。
+	尽管Pod中的容器挂载emptyDir卷的路径可能相同也可能不同，但是这些容器都可以
+	读写emptyDir卷中相同的文件。当Pod因为某些原因被从节点上删除时，emptyDir卷中的数据也会永久删除
+*/
+
 func NewVolumeManager(config string, share bool) (*VolumeManager, error) {
-	f, err := os.Open(config)
+	f, err := os.Open(config) //阅读打开打开指定的文件，如果成功。方法返回的文件可以用于阅读;如果错误产生一个返回值
 	if err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
+	defer f.Close() //defer表示最后执行
 
 	volumeManager := &VolumeManager{
-		cfgPath:    filepath.Dir(config),
+		cfgPath:    filepath.Dir(config), //返回卷配置路径的地址
 		cudaSoname: make(map[string]string),
 		mlSoName:   make(map[string]string),
 		share:      share,
@@ -80,7 +90,8 @@ func NewVolumeManager(config string, share bool) (*VolumeManager, error) {
 	return volumeManager, nil
 }
 
-//Run starts a VolumeManager
+// Run starts a VolumeManager
+// 开启卷管理器
 func (vm *VolumeManager) Run() (err error) {
 	cache, err := ldcache.Open()
 	if err != nil {

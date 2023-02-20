@@ -41,6 +41,7 @@ func (m *responseManager) LoadFromFile(path string) error {
 
 	for _, item := range cp.PodDeviceEntries {
 		// Only vcore resource has valid response data
+		//只有vcore资源有效的返回数据
 		if item.ResourceName == types.VCoreAnnotation {
 			allocResp := &pluginapi.ContainerAllocateResponse{}
 			if err := allocResp.Unmarshal(item.AllocResp); err != nil {

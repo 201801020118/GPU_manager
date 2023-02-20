@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func main() {
+func main() { //启动函数，主函数
 	klog.InitFlags(nil)
 	opt := options.NewOptions()
 	opt.AddFlags(pflag.CommandLine)

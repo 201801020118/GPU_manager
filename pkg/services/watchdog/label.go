@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/klog"
-	"tkestack.io/nvml"
 )
 
 const (
@@ -22,7 +21,7 @@ type labelFunc interface {
 	GetLabel() string
 }
 
-type nodeLabeler struct {
+type nodeLabeler struct { //节点标签结构体
 	hostName    string
 	client      v1core.CoreV1Interface
 	labelMapper map[string]labelFunc
@@ -77,7 +76,7 @@ func getTypeName(name string) string {
 	return ""
 }
 
-//NewNodeLabeler returns a new nodeLabeler
+// NewNodeLabeler returns a new nodeLabeler
 func NewNodeLabeler(client v1core.CoreV1Interface, hostname string, labels map[string]string) *nodeLabeler {
 	if len(hostname) == 0 {
 		hostname, _ = os.Hostname()
