@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 	"os"
 	"regexp"
 	"strings"
@@ -13,8 +14,6 @@ import (
 	"time"
 	"tkestack.io/gpu-manager/pkg/config"
 	"tkestack.io/gpu-manager/pkg/device"
-
-	"k8s.io/klog"
 )
 
 const (

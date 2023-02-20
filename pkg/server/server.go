@@ -194,6 +194,8 @@ func (m *managerImpl) Run() error {
 	m.virtualManager.Run()
 
 	treeInitFn := deviceFactory.NewFuncForName(m.config.Driver)
+	//从deviceFactory设备工厂函数中根据config.Driver类型返回一个有名函数，
+	//用于获取实现了接口的具体实例对象
 	tree := treeInitFn(m.config)
 
 	tree.Init("")
