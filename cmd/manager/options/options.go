@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DefaultDriver                   = "nvidia"
+	DefaultDriver                   = "nvidia" //将其修改为寒武纪的驱动
 	DefaultQueryPort                = 5678
 	DefaultSamplePeriod             = 1
 	DefaultVirtualManagerPath       = "/etc/gpu-manager/vm"

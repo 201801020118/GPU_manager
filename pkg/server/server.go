@@ -198,8 +198,8 @@ func (m *managerImpl) Run() error {
 	//用于获取实现了接口的具体实例对象
 	tree := treeInitFn(m.config)
 
-	tree.Init("")
-	tree.Update()
+	tree.Init("") //执行了接口的Init和Update函数（gpu拓扑结构感知）
+	tree.Update() //更新树节点显存使用情况，还有pid列表
 
 	initAllocator := allocFactory.NewFuncForName(m.config.Driver)
 	if initAllocator == nil {

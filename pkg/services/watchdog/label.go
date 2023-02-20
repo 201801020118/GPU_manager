@@ -1,15 +1,15 @@
 package watchdog
 
 import (
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/klog"
 )
 

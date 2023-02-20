@@ -11,14 +11,14 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-//GPUTopoService is server api for GPU topology service
+// GPUTopoService is server api for GPU topology service
 type GPUTopoService interface {
 	pluginapi.DevicePluginServer
 	ListAndWatchWithResourceName(string, *pluginapi.Empty, pluginapi.DevicePlugin_ListAndWatchServer) error
 	virtualmanager.VirtualManagerServer
 }
 
-//NewFunc represents function for creating new GPUTopoService
+// NewFunc represents function for creating new GPUTopoService
 type NewFunc func(cfg *config.Config,
 	tree device.GPUTree,
 	k8sClient kubernetes.Interface,
@@ -28,7 +28,7 @@ var (
 	factory = make(map[string]NewFunc)
 )
 
-//Register stores NewFunc in factory
+// Register stores NewFunc in factory
 func Register(name string, item NewFunc) {
 	if _, ok := factory[name]; ok {
 		return
@@ -39,7 +39,8 @@ func Register(name string, item NewFunc) {
 	factory[name] = item
 }
 
-//NewFuncForName tries to find NewFunc by name, return nil if not found
+// NewFuncForName tries to find NewFunc by name, return nil if not found
+// 试图找到NewFunc的名字,如果没有找到返回nil
 func NewFuncForName(name string) NewFunc {
 	if item, ok := factory[name]; ok {
 		return item

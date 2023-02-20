@@ -70,6 +70,7 @@ func newNvidiaTree(cfg *config.Config) *NvidiaTree {
 // Init a NvidiaTree.
 // Will try to use nvml first, fallback to input string if
 // parseFromLibrary() failed.
+// 初始化gpuTree
 func (t *NvidiaTree) Init(input string) {
 	err := t.parseFromLibrary()
 	if err == nil {
@@ -80,7 +81,7 @@ func (t *NvidiaTree) Init(input string) {
 	klog.V(2).Infof("Can't use nvidia library, err %s. Use text parser", err)
 
 	err = t.parseFromString(input)
-
+	//封装了 github.com/tkestack/go-nvml 库，简化调用NVML的操作
 	if err != nil {
 		klog.Fatalf("Can not initialize nvidia tree, err %s", err)
 	}
@@ -173,7 +174,7 @@ func (t *NvidiaTree) parseFromLibrary() error {
 		pciInfo, _ := dev.DeviceGetPciInfo()
 		minorID, _ := dev.DeviceGetMinorNumber()
 		uuid, _ := dev.DeviceGetUUID()
-
+		//初始化新nvidiaNode对象
 		rawName, _ := dev.DeviceGetName()
 		n := t.allocateNode(i)
 		n.AllocatableMeta.Cores = HundredCore
