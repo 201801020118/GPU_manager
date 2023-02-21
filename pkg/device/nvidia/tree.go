@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"tkestack.io/gpu-manager/pkg/cndev"
 	"tkestack.io/gpu-manager/pkg/config"
 	"tkestack.io/gpu-manager/pkg/device"
 )
@@ -94,7 +95,7 @@ func (t *NvidiaTree) Update() {
 		return
 	}
 
-	if err := nvml.Init(); err != nil {
+	if err := cndev.Init(); err != nil {
 		return
 	}
 
