@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DefaultDriver                   = "nvidia" //将其修改为寒武纪的驱动
+	DefaultDriver                   = "cambricon" //将其修改为寒武纪的驱动
 	DefaultQueryPort                = 5678
 	DefaultSamplePeriod             = 1
 	DefaultVirtualManagerPath       = "/etc/gpu-manager/vm"
@@ -24,7 +24,9 @@ type Options struct {
 	Driver           string //gpu-manger的驱动，默认为英伟达（nvidia）
 	ExtraPath        string //额外配置文件加载路径
 	VolumeConfigPath string //volume配置文件路径，volum.conf记录了具体路径关于使用到的cuda命令和nvidia cuda库
-	QueryPort        int    //使用prometheus查询metric监听的端口
+	//      //相关挂载知识:https://www.cnblogs.com/ittranslator/p/13352727.html
+	//      //相关挂载知识:https://www.cnblogs.com/oolo/p/11679733.html
+	QueryPort int //使用prometheus查询metric监听的端口
 	//相关知识（prometheus）：https://zhuanlan.zhihu.com/p/267966193
 	//相关知识（metric）：https://zhuanlan.zhihu.com/p/107213754
 	QueryAddr                string //让prometheus查询metric监听的地址
