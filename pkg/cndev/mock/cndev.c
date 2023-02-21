@@ -49,6 +49,9 @@ cndevRet_t cndevGetDeviceCount(cndevCardInfo_t *cardNum) {
 	return CNDEV_SUCCESS;
 }
 cndevRet_t cndevInit(int reserved) { return CNDEV_SUCCESS; }
+cndevRet_t cndevTopologyGetRelationship(cndevTopologyRelationship_t *relationship, int devId1, int devId2){
+
+}
 cndevRet_t cndevGetCardHealthState(cndevCardHealthState_t *cardHealthState,
 				   int devId) {
 	cJSON *config;

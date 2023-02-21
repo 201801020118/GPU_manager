@@ -2,20 +2,19 @@ package nvidia
 
 import (
 	"fmt"
+	"github.com/mxpv/nvml-go"
 	"math/bits"
 
 	"k8s.io/klog"
-
-	"tkestack.io/nvml"
 )
 
-//SchedulerCache contains allocatable resource of GPU
+// SchedulerCache contains allocatable resource of GPU
 type SchedulerCache struct {
 	Cores  int64
 	Memory int64
 }
 
-//DeviceMeta contains metadata of GPU device
+// DeviceMeta contains metadata of GPU device
 type DeviceMeta struct {
 	ID          int
 	ModelName   string
@@ -28,7 +27,7 @@ type DeviceMeta struct {
 	UUID        string
 }
 
-//NvidiaNode represents a node of Nvidia GPU
+// NvidiaNode represents a node of Nvidia GPU
 type NvidiaNode struct {
 	Meta            DeviceMeta
 	AllocatableMeta SchedulerCache
@@ -39,7 +38,7 @@ type NvidiaNode struct {
 
 	pendingReset bool
 	vchildren    map[int]*NvidiaNode
-	ntype        nvml.GpuTopologyLevel
+	ntype        nvml.GPUTopologyLevel
 	tree         *NvidiaTree
 }
 
@@ -48,7 +47,7 @@ var (
 	nodeIndex = 0
 )
 
-//NewNvidiaNode returns a new NvidiaNode
+// NewNvidiaNode returns a new NvidiaNode
 func NewNvidiaNode(t *NvidiaTree) *NvidiaNode {
 	node := &NvidiaNode{
 		vchildren: make(map[int]*NvidiaNode),
@@ -69,18 +68,18 @@ func (n *NvidiaNode) setParent(p *NvidiaNode) {
 	p.vchildren[n.Meta.ID] = n
 }
 
-//MinorName returns MinorID of this NvidiaNode
+// MinorName returns MinorID of this NvidiaNode
 func (n *NvidiaNode) MinorName() string {
 	return fmt.Sprintf(NamePattern, n.Meta.MinorID)
 }
 
-//Type returns GpuTopologyLevel of this NvidiaNode
+// Type returns GpuTopologyLevel of this NvidiaNode
 func (n *NvidiaNode) Type() int {
 	return int(n.ntype)
 }
 
-//GetAvailableLeaves returns leaves of this NvidiaNode
-//which available for allocating.
+// GetAvailableLeaves returns leaves of this NvidiaNode
+// which available for allocating.
 func (n *NvidiaNode) GetAvailableLeaves() []*NvidiaNode {
 	var leaves []*NvidiaNode
 
@@ -96,25 +95,25 @@ func (n *NvidiaNode) GetAvailableLeaves() []*NvidiaNode {
 	return leaves
 }
 
-//Available returns conut of available leaves
-//of this NvidiaNode.
+// Available returns conut of available leaves
+// of this NvidiaNode.
 func (n *NvidiaNode) Available() int {
 	return bits.OnesCount32(n.Mask)
 }
 
 func (n *NvidiaNode) String() string {
 	switch n.ntype {
-	case nvml.TOPOLOGY_INTERNAL:
+	case nvml.TopologyInternal:
 		return fmt.Sprintf("GPU%d", n.Meta.ID)
-	case nvml.TOPOLOGY_SINGLE:
+	case nvml.TopologySingle:
 		return "PIX"
-	case nvml.TOPOLOGY_MULTIPLE:
+	case nvml.TopologyMultiple:
 		return "PXB"
-	case nvml.TOPOLOGY_HOSTBRIDGE:
+	case nvml.TopologyHostbridge:
 		return "PHB"
-	case nvml.TOPOLOGY_CPU:
+	case nvml.TopologyNode:
 		return "CPU"
-	case nvml.TOPOLOGY_SYSTEM:
+	case nvml.TopologySystem:
 		return "SYS"
 	}
 

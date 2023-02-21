@@ -1,30 +1,56 @@
 package cambricon
 
 import (
+	"github.com/mxpv/nvml-go"
+	"k8s.io/client-go/kubernetes"
+	"sync"
+	"time"
 	"tkestack.io/gpu-manager/pkg/config"
 	"tkestack.io/gpu-manager/pkg/device"
 )
 
+const (
+	NamePattern = "/dev/cambeicon%d"
+	one         = uint32(1)
+)
+
+type CambriconTree struct {
+	sync.Mutex
+	root         *CambriconNode
+	leaves       []*CambriconNode
+	k8sclient    kubernetes.Interface
+	realMode     bool
+	query        map[string]*CambriconNode
+	index        int
+	samplePeriod time.Duration
+}
+
 func init() {
-	device.Register("cambeicon", NewCambeiconTree)
+	device.Register("cambeicon", NewCambriconTree)
 }
 
-// CambeiconTree represents cambeicon tree struct
-type CambeiconTree struct {
+var _ device.GPUTree = &CambriconTree{}
+
+// NewCambriconTree creates a new DummyTree
+func NewCambriconTree(_ *config.Config) device.GPUTree {
+	return &CambriconTree{}
 }
 
-var _ device.GPUTree = &CambeiconTree{}
+func (t *CambriconTree) allocateNode(index int) *CambriconNode {
+	node := NewCambriconNode(t)
 
-// NewCambeiconTree creates a new DummyTree
-func NewCambeiconTree(_ *config.Config) device.GPUTree {
-	return &CambeiconTree{}
+	node.ntype = nvml.TopologyInternal
+	node.Meta.ID = index
+	node.Mask = one << uint(index)
+
+	return node
 }
 
-// Init a CambeiconTree
-func (t *CambeiconTree) Init(_ string) {
+// Init a CambriconTree
+func (t *CambriconTree) Init(_ string) {
 }
 
-// Update a CambeiconTree
-func (t *CambeiconTree) Update() {
+// Update a CambriconTree
+func (t *CambriconTree) Update() {
 
 }

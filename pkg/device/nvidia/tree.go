@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mxpv/nvml-go"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 	"tkestack.io/gpu-manager/pkg/cndev"
+
 	"tkestack.io/gpu-manager/pkg/config"
 	"tkestack.io/gpu-manager/pkg/device"
 )
@@ -29,7 +31,7 @@ const (
 )
 
 // LevelMap is a map stores NvidiaNode on each level.
-type LevelMap map[nvml.GpuTopologyLevel][]*NvidiaNode
+type LevelMap map[nvml.GPUTopologyLevel]*NvidiaNode
 
 // NvidiaTree represents a Nvidia GPU in a tree.
 // 一个GPU树
@@ -140,7 +142,7 @@ func (t *NvidiaTree) Update() {
 func (t *NvidiaTree) allocateNode(index int) *NvidiaNode {
 	node := NewNvidiaNode(t)
 
-	node.ntype = nvml.TOPOLOGY_INTERNAL
+	node.ntype = nvml.TopologyInternal
 	node.Meta.ID = index
 	node.Mask = one << uint(index)
 
@@ -203,8 +205,8 @@ func (t *NvidiaTree) parseFromLibrary() error {
 				return err
 			}
 
-			if multi > 0 && ntype == nvml.TOPOLOGY_INTERNAL {
-				ntype = nvml.TOPOLOGY_SINGLE
+			if multi > 0 && ntype == nvml.TopologyInternal {
+				ntype = nvml.TopologySingle
 			}
 
 			if newNode := t.join(nodes, ntype, int(cardA), int(cardB)); newNode != nil {
@@ -280,11 +282,11 @@ func (t *NvidiaTree) parseFromString(input string) error {
 func (t *NvidiaTree) buildTree(nodes LevelMap) {
 	// Create connections
 	for _, cur := range t.leaves {
-		level := int(nvml.TOPOLOGY_SINGLE)
+		level := int(nvml.TopologySingle)
 		self := cur
 
 		for {
-			for _, upperNode := range nodes[nvml.GpuTopologyLevel(level)] {
+			for _, upperNode := range nodes[nvml.GPUTopologyLevel(level)] {
 				if (upperNode.Mask & self.Mask) != 0 {
 					self.setParent(upperNode)
 					self = upperNode
@@ -294,7 +296,7 @@ func (t *NvidiaTree) buildTree(nodes LevelMap) {
 
 			level += levelStep
 
-			if level > int(nvml.TOPOLOGY_SYSTEM) {
+			if level > int(nvml.TopologySystem) {
 				break
 			}
 		}
@@ -302,17 +304,17 @@ func (t *NvidiaTree) buildTree(nodes LevelMap) {
 
 	// Find the root level
 	var firstLevel []*NvidiaNode
-	level := int(nvml.TOPOLOGY_SYSTEM)
+	level := int(nvml.TopologySystem)
 
 	t.root = NewNvidiaNode(t)
 	t.root.Parent = nil
 	for level > 0 {
-		if len(nodes[nvml.GpuTopologyLevel(level)]) == 0 {
+		if len(nodes[nvml.GPUTopologyLevel(level)]) == 0 {
 			level -= levelStep
 			continue
 		}
 
-		firstLevel = nodes[nvml.GpuTopologyLevel(level)]
+		firstLevel = nodes[nvml.GPUTopologyLevel(level)]
 		break
 	}
 
@@ -366,7 +368,7 @@ func trimEmpty(splits []string) []string {
 	return data
 }
 
-func (t *NvidiaTree) join(nodes LevelMap, ntype nvml.GpuTopologyLevel, indexA, indexB int) *NvidiaNode {
+func (t *NvidiaTree) join(nodes LevelMap, ntype nvml.GPUTopologyLevel, indexA, indexB int) *NvidiaNode {
 	klog.V(5).Infof("Join %d and %d in type %d", indexA, indexB, int(ntype))
 	nodeA, nodeB := t.leaves[indexA], t.leaves[indexB]
 	mask := nodeA.Mask | nodeB.Mask
@@ -536,7 +538,7 @@ func (t *NvidiaTree) PrintGraph() string {
 	)
 
 	buf.WriteString(fmt.Sprintf("%s:%d\n", t.root.String(), t.root.Available()))
-	printIter(&buf, t.root, int(nvml.TOPOLOGY_INTERNAL))
+	printIter(&buf, t.root, int(nvml.TopologyInternal))
 
 	output := buf.String()
 
@@ -571,7 +573,7 @@ func (t *NvidiaTree) updateNode(idx int) *NvidiaNode {
 }
 
 func printIter(w *bytes.Buffer, node *NvidiaNode, level int) {
-	for i := int(nvml.TOPOLOGY_INTERNAL) + levelStep; i < level; i += levelStep {
+	for i := int(nvml.TopologyInternal) + levelStep; i < level; i += levelStep {
 		w.WriteString("|   ")
 	}
 
@@ -632,7 +634,7 @@ func (t *NvidiaTree) printGpuNode() string {
 }
 
 func printNode(node *NvidiaNode) string {
-	if node.ntype != nvml.TOPOLOGY_INTERNAL {
+	if node.ntype != nvml.TopologyInternal {
 		return fmt.Sprintf("%s (aval: %d, pids: %+v, usedMemory: %d, totalMemory: %d, allocatableCores: %d, allocatableMemory: %d)\n",
 			node.String(), node.Available(), node.Meta.Pids, node.Meta.UsedMemory, node.Meta.TotalMemory,
 			node.AllocatableMeta.Cores, node.AllocatableMeta.Memory)

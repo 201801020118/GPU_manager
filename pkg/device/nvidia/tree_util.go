@@ -1,25 +1,24 @@
 package nvidia
 
 import (
+	"github.com/mxpv/nvml-go"
 	"strings"
-
-	"tkestack.io/nvml"
 )
 
-func parseToGpuTopologyLevel(str string) nvml.GpuTopologyLevel {
+func parseToGpuTopologyLevel(str string) nvml.GPUTopologyLevel {
 	switch str {
 	case "PIX":
-		return nvml.TOPOLOGY_SINGLE
+		return nvml.TopologySingle
 	case "PXB":
-		return nvml.TOPOLOGY_MULTIPLE
+		return nvml.TopologyMultiple
 	case "PHB":
-		return nvml.TOPOLOGY_HOSTBRIDGE
+		return nvml.TopologyHostbridge
 	case "SOC":
-		return nvml.TOPOLOGY_CPU
+		return nvml.TopologyNode
 	}
 
 	if strings.HasPrefix(str, "GPU") {
-		return nvml.TOPOLOGY_INTERNAL
+		return nvml.TopologyInternal
 	}
 
 	return nvml.TOPOLOGY_UNKNOWN
